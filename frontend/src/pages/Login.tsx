@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import type { AuthResponse, APIResponse } from '../types/auth';
+import type { APIResponse } from '../types/auth';
 
 export function Login() {
   const { setToken } = useAuth();

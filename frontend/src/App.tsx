@@ -11,6 +11,7 @@ import { Applications } from './pages/applications/List';
 import { CreateApplication } from './pages/applications/Create';
 import { EditApplication } from './pages/applications/Edit';
 import { ApplicationDetails } from './pages/applications/Details';
+import { ApplicationUsers } from './pages/applications/Users';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                 <Route path="new" element={<CreateApplication />} />
                 <Route path=":id" element={<ApplicationDetails />} />
                 <Route path=":id/edit" element={<EditApplication />} />
+                <Route path=":id/users" element={<ApplicationUsers />} />
               </Route>
               <Route index element={<Navigate to="dashboard" replace />} />
             </Route>

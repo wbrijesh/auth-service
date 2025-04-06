@@ -25,7 +25,8 @@ export default function Login() {
       return;
     }
 
-    login(response.data.sessionToken);
+    // Pass both the token and the user data to the login function
+    login(response.data.sessionToken, response.data.user);
     router.push('/dashboard');
   };
 

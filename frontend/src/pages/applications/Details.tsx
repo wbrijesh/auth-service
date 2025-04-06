@@ -87,6 +87,12 @@ export function ApplicationDetails() {
                 <h1 className="text-2xl font-bold">{application.name}</h1>
                 <div className="flex space-x-3">
                     <Link
+                        to={`/app/applications/${id}/users`}
+                        className="bg-neutral-700 text-white px-4 py-2 rounded-md hover:bg-neutral-600"
+                    >
+                        View Users
+                    </Link>
+                    <Link
                         to={`/app/applications/${id}/edit`}
                         className="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700"
                     >

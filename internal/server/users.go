@@ -169,3 +169,48 @@ func (s *Server) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
+func (s *Server) handleGetUserDetails(w http.ResponseWriter, r *http.Request) {
+	sessionToken := r.Header.Get("X-Session-Token")
+	if sessionToken == "" {
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Session token required",
+		})
+		return
+	}
+
+	// Get session by token
+	session, err := s.db.GetSessionByToken(sessionToken)
+	if err != nil || session == nil {
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Invalid session",
+		})
+		return
+	}
+
+	// Check if session is expired
+	if session.ExpiresAt.Before(time.Now()) {
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Session expired",
+		})
+		return
+	}
+
+	// Get user by ID
+	user, err := s.db.GetUserByID(session.UserID)
+	if err != nil || user == nil {
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "User not found",
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Data:    user,
+	})
+}

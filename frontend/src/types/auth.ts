@@ -57,3 +57,17 @@ export interface ApplicationsListResponse {
   applications: Application[];
   count: number;
 }
+
+export interface UsersListResponse {
+  users: User[];
+  count: number;
+}
+
+export interface User {
+  id: string;
+  applicationId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+}

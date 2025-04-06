@@ -183,3 +183,43 @@ func (s *Server) handleDeleteApplication(w http.ResponseWriter, r *http.Request)
 		Success: true,
 	})
 }
+
+func (s *Server) handleGetApplicationUsers(w http.ResponseWriter, r *http.Request) {
+	developerID := r.Context().Value("developerID").(string)
+	appID := chi.URLParam(r, "id")
+
+	// First verify the app belongs to this developer
+	_, err := s.db.GetApplicationByID(appID, developerID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		errMsg := "Failed to verify application"
+		if err == sql.ErrNoRows {
+			status = http.StatusNotFound
+			errMsg = "Application not found"
+		}
+		w.WriteHeader(status)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   errMsg,
+		})
+		return
+	}
+
+	// Get users for this app
+	users, err := s.db.GetUsersByApplicationID(appID)
+	if err != nil {
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Failed to fetch users",
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"users": users,
+			"count": len(users),
+		},
+	})
+}

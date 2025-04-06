@@ -30,6 +30,8 @@ type Service interface {
 	GetSessionByToken(token string) (*Session, error)
 	DeleteSession(id string) error
 	GetApplicationByPublicKey(publicKey string) (*Application, error)
+	GetUsersByApplicationID(applicationID string) ([]User, error)
+	GetUserByID(id string) (*User, error)
 }
 
 type Developer struct {
@@ -254,6 +256,19 @@ func (s *service) GetUserByEmail(applicationID, email string) (*User, error) {
 	return &user, err
 }
 
+func (s *service) GetUserByID(id string) (*User, error) {
+	var user User
+	err := s.db.QueryRow(
+		`SELECT id, application_id, email, first_name, last_name, created_at 
+		 FROM users WHERE id = ?`, id).
+		Scan(&user.ID, &user.ApplicationID, &user.Email,
+			&user.FirstName, &user.LastName, &user.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &user, err
+}
+
 func (s *service) CreateSession(session *Session) error {
 	_, err := s.db.Exec(
 		`INSERT INTO sessions (id, user_id, application_id, token, expires_at) 
@@ -292,4 +307,27 @@ func (s *service) GetApplicationByPublicKey(publicKey string) (*Application, err
 		return nil, nil
 	}
 	return &app, err
+}
+
+func (s *service) GetUsersByApplicationID(applicationID string) ([]User, error) {
+	rows, err := s.db.Query(
+		`SELECT id, application_id, email, first_name, last_name, created_at 
+		 FROM users WHERE application_id = ?`, applicationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		err := rows.Scan(
+			&user.ID, &user.ApplicationID, &user.Email,
+			&user.FirstName, &user.LastName, &user.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, rows.Err()
 }

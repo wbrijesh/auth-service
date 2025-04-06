@@ -95,9 +95,53 @@ export async function loginUser(credentials) {
     
     const data = await response.json();
     console.log('Login response:', data);
+    
+    // If login was successful and we have a session token, fetch user details
+    if (data.success && data.data && data.data.sessionToken) {
+      const userResponse = await getUserDetails(data.data.sessionToken);
+      if (userResponse.success && userResponse.data) {
+        data.data.user = userResponse.data;
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error('Login error:', error);
+    return { success: false, error: `Network error: ${error.message}` };
+  }
+}
+
+// Get authenticated user details
+export async function getUserDetails(sessionToken) {
+  const path = '/api/users/me';
+  const method = 'GET';
+  const timestamp = Date.now().toString();
+  const body = '';
+  
+  try {
+    const signature = generateSignature(method, path, timestamp, body);
+    
+    const response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Public-Key': PUBLIC_KEY,
+        'X-Timestamp': timestamp,
+        'X-Signature': signature,
+        'X-Session-Token': sessionToken,
+      },
+      mode: 'cors',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      return { success: false, error: `Server error: ${response.status}` };
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching user details:', error);
     return { success: false, error: `Network error: ${error.message}` };
   }
 }
