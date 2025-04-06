@@ -15,21 +15,35 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(middleware.Logger)
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
-		MaxAge:           300,
+		AllowedOrigins: []string{"https://*", "http://*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders: []string{
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"X-Public-Key",
+			"X-Timestamp",
+			"X-Signature",
+		}, AllowCredentials: true,
+		MaxAge: 300,
 	}))
 
+	// Developer auth routes
 	r.Post("/api/auth/register", s.handleRegister)
 	r.Post("/api/auth/login", s.handleLogin)
 
-	r.Get("/", s.HelloWorldHandler)
+	// Application user auth routes
+	r.Group(func(r chi.Router) {
+		r.Use(s.apiKeyAuthMiddleware)
 
+		r.Post("/api/users/register", s.handleUserRegister)
+		r.Post("/api/users/login", s.handleUserLogin)
+	})
+
+	r.Get("/", s.HelloWorldHandler)
 	r.Get("/health", s.healthHandler)
 
-	// Application routes (protected)
+	// Application routes (protected by JWT)
 	r.Group(func(r chi.Router) {
 		r.Use(s.authMiddleware)
 

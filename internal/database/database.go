@@ -24,6 +24,12 @@ type Service interface {
 	UpdateApplication(app *Application) error
 	DeleteApplication(id string, developerID string) error
 	GetApplicationByID(id string, developerID string) (*Application, error)
+	CreateUser(user *User) error
+	GetUserByEmail(applicationID, email string) (*User, error)
+	CreateSession(session *Session) error
+	GetSessionByToken(token string) (*Session, error)
+	DeleteSession(id string) error
+	GetApplicationByPublicKey(publicKey string) (*Application, error)
 }
 
 type Developer struct {
@@ -43,6 +49,25 @@ type Application struct {
 	PublicKey   string    `json:"publicKey"`
 	SecretKey   string    `json:"secretKey"`
 	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type User struct {
+	ID            string    `json:"id"`
+	ApplicationID string    `json:"applicationId"`
+	Email         string    `json:"email"`
+	FirstName     string    `json:"firstName"`
+	LastName      string    `json:"lastName"`
+	PasswordHash  string    `json:"-"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
+
+type Session struct {
+	ID            string    `json:"id"`
+	UserID        string    `json:"userId"`
+	ApplicationID string    `json:"applicationId"`
+	Token         string    `json:"token"`
+	ExpiresAt     time.Time `json:"expiresAt"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type service struct {
@@ -204,4 +229,67 @@ func (s *service) DeleteApplication(id string, developerID string) error {
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (s *service) CreateUser(user *User) error {
+	_, err := s.db.Exec(
+		`INSERT INTO users (id, application_id, email, password_hash, first_name, last_name) 
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		user.ID, user.ApplicationID, user.Email, user.PasswordHash,
+		user.FirstName, user.LastName)
+	return err
+}
+
+func (s *service) GetUserByEmail(applicationID, email string) (*User, error) {
+	var user User
+	err := s.db.QueryRow(
+		`SELECT id, application_id, email, password_hash, first_name, last_name, created_at 
+		 FROM users WHERE application_id = ? AND email = ?`,
+		applicationID, email).
+		Scan(&user.ID, &user.ApplicationID, &user.Email, &user.PasswordHash,
+			&user.FirstName, &user.LastName, &user.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &user, err
+}
+
+func (s *service) CreateSession(session *Session) error {
+	_, err := s.db.Exec(
+		`INSERT INTO sessions (id, user_id, application_id, token, expires_at) 
+		 VALUES (?, ?, ?, ?, ?)`,
+		session.ID, session.UserID, session.ApplicationID,
+		session.Token, session.ExpiresAt)
+	return err
+}
+
+func (s *service) GetSessionByToken(token string) (*Session, error) {
+	var session Session
+	err := s.db.QueryRow(
+		`SELECT id, user_id, application_id, token, expires_at, created_at 
+		 FROM sessions WHERE token = ?`, token).
+		Scan(&session.ID, &session.UserID, &session.ApplicationID,
+			&session.Token, &session.ExpiresAt, &session.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &session, err
+}
+
+func (s *service) DeleteSession(id string) error {
+	_, err := s.db.Exec("DELETE FROM sessions WHERE id = ?", id)
+	return err
+}
+
+func (s *service) GetApplicationByPublicKey(publicKey string) (*Application, error) {
+	var app Application
+	err := s.db.QueryRow(
+		`SELECT id, developer_id, name, domain, public_key, secret_key, created_at 
+		 FROM applications WHERE public_key = ?`, publicKey).
+		Scan(&app.ID, &app.DeveloperID, &app.Name, &app.Domain,
+			&app.PublicKey, &app.SecretKey, &app.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &app, err
 }

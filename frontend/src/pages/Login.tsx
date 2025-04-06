@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import type { AuthResponse } from '../types/auth';
+import type { AuthResponse, APIResponse } from '../types/auth';
 
 export function Login() {
   const { setToken } = useAuth();
@@ -19,10 +19,13 @@ export function Login() {
         body: JSON.stringify({ email, password }),
       });
       
-      if (!res.ok) throw new Error('Invalid credentials');
+      const data: APIResponse<{ token: string }> = await res.json();
       
-      const data: AuthResponse = await res.json();
-      setToken(data.token);
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Invalid credentials');
+      }
+      
+      setToken(data.data.token);
       navigate('/app/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

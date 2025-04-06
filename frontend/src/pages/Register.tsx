@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import type { AuthResponse } from '../types/auth';
+import type { AuthResponse, APIResponse } from '../types/auth';
 
 export function Register() {
   const { setToken } = useAuth();
@@ -23,10 +23,13 @@ export function Register() {
         body: JSON.stringify(formData),
       });
       
-      if (!res.ok) throw new Error('Registration failed');
+      const data: APIResponse<{ token: string }> = await res.json();
       
-      const data: AuthResponse = await res.json();
-      setToken(data.token);
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Registration failed');
+      }
+      
+      setToken(data.data.token);
       navigate('/app/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
