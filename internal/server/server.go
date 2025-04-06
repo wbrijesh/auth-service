@@ -14,9 +14,10 @@ import (
 )
 
 type Server struct {
-	port int
-	db   database.Service
-	jwt  struct {
+	port      int
+	db        database.Service
+	jwtSecret []byte
+	jwt       struct {
 		secret []byte
 		exp    time.Duration
 	}
@@ -26,8 +27,9 @@ func NewServer() *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 
 	srv := &Server{
-		port: port,
-		db:   database.New(),
+		port:      port,
+		db:        database.New(),
+		jwtSecret: []byte(os.Getenv("JWT_SECRET")),
 	}
 
 	// Configure JWT

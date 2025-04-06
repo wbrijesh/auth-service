@@ -19,6 +19,11 @@ type Service interface {
 	InitSchema() error
 	CreateDeveloper(dev *Developer) error
 	GetDeveloperByEmail(email string) (*Developer, error)
+	CreateApplication(app *Application) error
+	GetApplicationsByDeveloperID(developerID string) ([]Application, error)
+	UpdateApplication(app *Application) error
+	DeleteApplication(id string, developerID string) error
+	GetApplicationByID(id string, developerID string) (*Application, error)
 }
 
 type Developer struct {
@@ -28,6 +33,16 @@ type Developer struct {
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
 	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type Application struct {
+	ID          string    `json:"id"`
+	DeveloperID string    `json:"developerId"`
+	Name        string    `json:"name"`
+	Domain      string    `json:"domain"`
+	PublicKey   string    `json:"publicKey"`
+	SecretKey   string    `json:"secretKey"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type service struct {
@@ -109,4 +124,84 @@ func (s *service) GetDeveloperByEmail(email string) (*Developer, error) {
 		return nil, nil
 	}
 	return dev, err
+}
+
+func (s *service) CreateApplication(app *Application) error {
+	_, err := s.db.Exec(
+		`INSERT INTO applications (id, developer_id, name, domain, public_key, secret_key) 
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		app.ID, app.DeveloperID, app.Name, app.Domain, app.PublicKey, app.SecretKey)
+	return err
+}
+
+func (s *service) GetApplicationsByDeveloperID(developerID string) ([]Application, error) {
+	rows, err := s.db.Query(
+		`SELECT id, developer_id, name, domain, public_key, secret_key, created_at 
+		 FROM applications WHERE developer_id = ?`, developerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var apps []Application
+	for rows.Next() {
+		var app Application
+		err := rows.Scan(
+			&app.ID, &app.DeveloperID, &app.Name, &app.Domain,
+			&app.PublicKey, &app.SecretKey, &app.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, app)
+	}
+	return apps, rows.Err()
+}
+
+func (s *service) GetApplicationByID(id string, developerID string) (*Application, error) {
+	var app Application
+	err := s.db.QueryRow(
+		`SELECT id, developer_id, name, domain, public_key, secret_key, created_at 
+		 FROM applications 
+		 WHERE id = ? AND developer_id = ?`,
+		id, developerID).
+		Scan(&app.ID, &app.DeveloperID, &app.Name, &app.Domain, &app.PublicKey, &app.SecretKey, &app.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &app, nil
+}
+
+func (s *service) UpdateApplication(app *Application) error {
+	result, err := s.db.Exec(
+		`UPDATE applications SET name = ?, domain = ? 
+		 WHERE id = ? AND developer_id = ?`,
+		app.Name, app.Domain, app.ID, app.DeveloperID)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (s *service) DeleteApplication(id string, developerID string) error {
+	result, err := s.db.Exec(
+		"DELETE FROM applications WHERE id = ? AND developer_id = ?",
+		id, developerID)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

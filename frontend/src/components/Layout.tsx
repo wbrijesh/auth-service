@@ -22,6 +22,7 @@ export function Layout() {
               {isAuthenticated ? (
                 <>
                   <Link to="/app/dashboard" className="text-gray-300 hover:text-white">Dashboard</Link>
+                  <Link to="/app/applications" className="text-gray-300 hover:text-white">Applications</Link>
                   <Link to="/app/profile" className="text-gray-300 hover:text-white">Profile</Link>
                   <button 
                     onClick={handleLogout}

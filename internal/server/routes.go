@@ -29,6 +29,17 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	r.Get("/health", s.healthHandler)
 
+	// Application routes (protected)
+	r.Group(func(r chi.Router) {
+		r.Use(s.authMiddleware)
+
+		r.Post("/api/applications", s.handleCreateApplication)
+		r.Get("/api/applications", s.handleGetApplications)
+		r.Get("/api/applications/{id}", s.handleGetApplication)
+		r.Put("/api/applications/{id}", s.handleUpdateApplication)
+		r.Delete("/api/applications/{id}", s.handleDeleteApplication)
+	})
+
 	return r
 }
 

@@ -23,20 +23,22 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
-type authResponse struct {
-	Token string `json:"token"`
-}
-
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Invalid request format",
+		})
 		return
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Failed to hash password",
+		})
 		return
 	}
 
@@ -49,34 +51,52 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.db.CreateDeveloper(dev); err != nil {
-		http.Error(w, "Failed to create developer", http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Failed to create developer",
+		})
 		return
 	}
 
 	token := s.generateJWT(dev)
-	json.NewEncoder(w).Encode(authResponse{Token: token})
+	json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Data:    map[string]string{"token": token},
+	})
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Invalid request format",
+		})
 		return
 	}
 
 	dev, err := s.db.GetDeveloperByEmail(req.Email)
 	if err != nil || dev == nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Invalid credentials",
+		})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(dev.PasswordHash), []byte(req.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Error:   "Invalid credentials",
+		})
 		return
 	}
 
 	token := s.generateJWT(dev)
-	json.NewEncoder(w).Encode(authResponse{Token: token})
+	json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Data:    map[string]string{"token": token},
+	})
 }
 
 func (s *Server) generateJWT(dev *database.Developer) string {
