@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../config';
 import type { Application, APIResponse } from '../../types/auth';
 
 export function ApplicationDetails() {
@@ -15,7 +16,7 @@ export function ApplicationDetails() {
     useEffect(() => {
         const fetchApplication = async () => {
             try {
-                const res = await fetch(`http://localhost:8080/api/applications/${id}`, {
+                const res = await fetch(`${API_URL}/api/applications/${id}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                     },
@@ -39,7 +40,7 @@ export function ApplicationDetails() {
         if (!confirm('Are you sure you want to delete this application?')) return;
 
         try {
-            const res = await fetch(`http://localhost:8080/api/applications/${id}`, {
+            const res = await fetch(`${API_URL}/api/applications/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,

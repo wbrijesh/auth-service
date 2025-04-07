@@ -36,28 +36,14 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Application user auth routes
 	r.Group(func(r chi.Router) {
 		r.Use(s.apiKeyAuthMiddleware)
-		// r.Use(cors.Handler(cors.Options{
-		// 	AllowedOrigins: []string{"https://*", "http://*"},
-		// 	AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		// 	AllowedHeaders: []string{
-		// 		"Accept",
-		// 		"Authorization",
-		// 		"Content-Type",
-		// 		"X-Public-Key",
-		// 		"X-Timestamp",
-		// 		"X-Signature",
-		// 		"X-Session-Token",
-		// 	}, AllowCredentials: true,
-		// 	MaxAge: 300,
-		// }))
 
 		r.Post("/api/users/register", s.handleUserRegister)
 		r.Post("/api/users/login", s.handleUserLogin)
 		r.Get("/api/users/me", s.handleGetUserDetails) // New endpoint for user details
 	})
 
-	r.Get("/", s.HelloWorldHandler)
-	r.Get("/health", s.healthHandler)
+	r.Get("/api", s.HelloWorldHandler)
+	r.Get("/api/health", s.healthHandler)
 
 	// Application routes (protected by JWT)
 	r.Group(func(r chi.Router) {

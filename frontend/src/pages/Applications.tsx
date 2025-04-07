@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../config';
 import type { Application, APIResponse, ApplicationsListResponse } from '../types/auth';
 
 export function Applications() {
@@ -15,7 +16,7 @@ export function Applications() {
 
   const fetchApplications = async () => {
     try {
-      const res = await fetch('http://localhost:8080/api/applications', {
+      const res = await fetch(`${API_URL}/api/applications`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -40,7 +41,7 @@ export function Applications() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:8080/api/applications', {
+      const res = await fetch(`${API_URL}/api/applications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,7 +65,7 @@ export function Applications() {
 
   const handleUpdate = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/applications/${id}`, {
+      const res = await fetch(`${API_URL}/api/applications/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +90,7 @@ export function Applications() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this application?')) return;
     try {
-      const res = await fetch(`http://localhost:8080/api/applications/${id}`, {
+      const res = await fetch(`${API_URL}/api/applications/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

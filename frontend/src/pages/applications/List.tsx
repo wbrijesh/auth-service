@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../config';
 import type { Application, APIResponse, ApplicationsListResponse } from '../../types/auth';
 
 export function Applications() {
@@ -10,7 +11,7 @@ export function Applications() {
 
   const fetchApplications = async () => {
     try {
-      const res = await fetch('http://localhost:8080/api/applications', {
+      const res = await fetch(`${API_URL}/api/applications`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

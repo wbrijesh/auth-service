@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../config';
 import type { Application, APIResponse } from '../../types/auth';
 
 export function CreateApplication() {
@@ -15,7 +16,7 @@ export function CreateApplication() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:8080/api/applications', {
+      const res = await fetch(`${API_URL}/api/applications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

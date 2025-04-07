@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 
-const API_URL = 'http://localhost:8080';
+// Use environment variable with fallback
+const API_URL = process.env.NEXT_PUBLIC_AUTH_SERVER_BACKEND_HOST || 'http://localhost:8080';
 const PUBLIC_KEY = 'pk_kcnjpOlaKkzB0JXeMbE_-T8EwNKKH5bF';
 const SECRET_KEY = 'sk_Z5OLPzADYkWNVLr-e2yR736bkQdIx3KF';
 

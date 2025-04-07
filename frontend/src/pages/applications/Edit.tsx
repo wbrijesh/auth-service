@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../config';
 import type { Application, APIResponse } from '../../types/auth';
 
 export function EditApplication() {
@@ -18,7 +19,7 @@ export function EditApplication() {
     const fetchApplication = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(`http://localhost:8080/api/applications/${id}`, {
+        const res = await fetch(`${API_URL}/api/applications/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -49,7 +50,7 @@ export function EditApplication() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`http://localhost:8080/api/applications/${id}`, {
+      const res = await fetch(`${API_URL}/api/applications/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

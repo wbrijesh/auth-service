@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../config';
 import type { User, APIResponse, UsersListResponse } from '../../types/auth';
 
 export function ApplicationUsers() {
@@ -16,7 +17,7 @@ export function ApplicationUsers() {
       setIsLoading(true);
       try {
         // Fetch application details
-        const appRes = await fetch(`http://localhost:8080/api/applications/${id}`, {
+        const appRes = await fetch(`${API_URL}/api/applications/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -32,7 +33,7 @@ export function ApplicationUsers() {
         });
 
         // Fetch users
-        const usersRes = await fetch(`http://localhost:8080/api/applications/${id}/users`, {
+        const usersRes = await fetch(`${API_URL}/api/applications/${id}/users`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
