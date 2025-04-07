@@ -89,19 +89,19 @@ export function ApplicationDetails() {
                 <div className="flex space-x-3">
                     <Link
                         to={`/app/applications/${id}/users`}
-                        className="bg-neutral-700 text-white px-4 py-2 rounded-md hover:bg-neutral-600"
+                        className="bg-neutral-700 text-white px-4 py-2 rounded-md hover:bg-neutral-600 transition-colors duration-200"
                     >
                         View Users
                     </Link>
                     <Link
                         to={`/app/applications/${id}/edit`}
-                        className="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700"
+                        className="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700 transition-colors duration-200"
                     >
                         Edit
                     </Link>
                     <button
                         onClick={handleDelete}
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors duration-200"
                     >
                         Delete
                     </button>
@@ -122,7 +122,7 @@ export function ApplicationDetails() {
                                 <p className="text-sm font-mono text-gray-400">Public Key: {application.publicKey}</p>
                                 <button
                                     onClick={handleCopyPublicKey}
-                                    className="text-sky-500 hover:text-sky-400 text-sm"
+                                    className="text-sky-500 hover:text-sky-400 text-sm transition-colors duration-200"
                                 >
                                     {copyPublicState}
                                 </button>
@@ -134,7 +134,7 @@ export function ApplicationDetails() {
                                     <p className="text-sm font-mono text-gray-400">Secret Key: {application.secretKey}</p>
                                     <button
                                         onClick={handleCopySecretKey}
-                                        className="text-sky-500 hover:text-sky-400 text-sm"
+                                        className="text-sky-500 hover:text-sky-400 text-sm transition-colors duration-200"
                                     >
                                         {copySecretState}
                                     </button>

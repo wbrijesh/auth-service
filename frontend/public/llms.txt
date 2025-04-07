@@ -1,0 +1,978 @@
+# Aegis Authentication Service Documentation
+
+> This documentation provides a complete guide to setting up and using the Aegis authentication service, including getting started, application setup, user registration and login, user details, and API reference.
+
+## Getting Started
+
+### Getting Started with Aegis
+
+This guide will walk you through the initial setup process to obtain your authentication credentials.
+
+#### Step 1: Create a Developer Account
+
+To get started with Aegis, you need to create a developer account:
+
+1. Navigate to the [registration page](/register)
+2. Fill in your details and create an account
+3. Verify your email address if required
+4. Log in to access your developer dashboard
+
+#### Step 2: Create an Application
+
+Once logged in to your dashboard, you can create a new application:
+
+1. Click on "Applications" in the navigation menu
+2. Click the "Create New Application" button
+3. Enter a name for your application (e.g., "My Web App")
+4. Enter the domain where your application will run (e.g., "myapp.com")
+5. Click "Create" to generate your application
+
+> ⚠️ Important: The domain you enter should match where your application will be hosted. For local development, you can use "localhost" or "127.0.0.1".
+
+#### Step 3: Save Your API Keys
+
+After creating your application, you'll be provided with two important keys:
+
+- **Public Key** - Used to identify your application (e.g., `pk_kcnjpOlaKkzB0JXeMbE_-T8EwNKKH5bF`)
+- **Secret Key** - Used to sign API requests (e.g., `sk_Z5OLPzADYkWNVLr-e2yR736bkQdIx3KF`)
+
+```bash
+# Example API Keys
+PUBLIC_KEY=pk_kcnjpOlaKkzB0JXeMbE_-T8EwNKKH5bF
+SECRET_KEY=sk_Z5OLPzADYkWNVLr-e2yR736bkQdIx3KF
+```
+
+> 🔒 Security Warning: Your Secret Key should be treated as sensitive information. Never expose it in client-side code or commit it to version control. For production applications, always store it securely in environment variables.
+
+#### Next Steps
+
+Now that you have your API keys, you're ready to integrate Aegis into your application:
+
+- [Continue to Application Setup](/docs/application-setup)
+
+## Application Setup
+
+### Application Setup
+
+This guide will help you set up Aegis authentication in your Next.js application.
+
+#### Step 1: Environment Configuration
+
+First, set up your environment variables by creating or updating your `.env.local` file in the root of your Next.js project:
+
+```bash
+# Authentication settings
+NEXT_PUBLIC_AUTH_SERVER_BACKEND_HOST=http://localhost:8080
+NEXT_PUBLIC_AEGIS_PUBLIC_KEY=pk_your_public_key_here
+AEGIS_SECRET_KEY=sk_your_secret_key_here
+```
+
+> ⚠️ Note: Replace `pk_your_public_key_here` and `sk_your_secret_key_here` with the actual keys from your Aegis dashboard. Note that the public key uses the `NEXT_PUBLIC_` prefix because it can be exposed to the client, while the secret key does not have this prefix as it should only be used server-side.
+
+#### Step 2: Create Authentication Utilities
+
+Create a new file called `utils/auth.js` to handle authentication operations:
+
+```javascript
+import crypto from 'crypto';
+
+// Configuration from environment variables
+const API_URL = process.env.NEXT_PUBLIC_AUTH_SERVER_BACKEND_HOST || 'http://localhost:8080';
+const PUBLIC_KEY = process.env.NEXT_PUBLIC_AEGIS_PUBLIC_KEY;
+const SECRET_KEY = process.env.AEGIS_SECRET_KEY;
+
+// Generate HMAC signature for API requests
+function generateSignature(method, path, timestamp, body) {
+  try {
+    const payload = timestamp + method + path + body;
+    const hmac = crypto.createHmac('sha256', SECRET_KEY);
+    hmac.update(payload);
+    return hmac.digest('hex');
+  } catch (error) {
+    console.error('Signature generation error:', error);
+    return '';
+  }
+}
+
+// Register a new user
+export async function registerUser(userData) {
+  const path = '/api/users/register';
+  const method = 'POST';
+  const timestamp = Date.now().toString();
+  const body = JSON.stringify(userData);
+
+  try {
+    const signature = generateSignature(method, path, timestamp, body);
+
+    const response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Public-Key': PUBLIC_KEY,
+        'X-Timestamp': timestamp,
+        'X-Signature': signature,
+      },
+      body,
+      mode: 'cors',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `Server error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: `Network error: ${error.message}` };
+  }
+}
+
+// Login an existing user
+export async function loginUser(credentials) {
+  const path = '/api/users/login';
+  const method = 'POST';
+  const timestamp = Date.now().toString();
+  const body = JSON.stringify(credentials);
+
+  try {
+    const signature = generateSignature(method, path, timestamp, body);
+
+    const response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Public-Key': PUBLIC_KEY,
+        'X-Timestamp': timestamp,
+        'X-Signature': signature,
+      },
+      body,
+      mode: 'cors',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `Server error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: `Network error: ${error.message}` };
+  }
+}
+
+// Check API connectivity (useful for debugging)
+export async function checkApiConnection() {
+  try {
+    const response = await fetch(`${API_URL}/health`, {
+      method: 'GET',
+      mode: 'cors',
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `Health check failed: ${response.status}` };
+    }
+
+    return { success: true, message: 'API connection successful' };
+  } catch (error) {
+    return { success: false, error: `Connection test failed: ${error.message}` };
+  }
+}
+```
+
+#### Step 3: Create an Authentication Context
+
+Create a new file called `context/AuthContext.js` to manage authentication state throughout your application:
+
+```javascript
+import { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+
+const AuthContext = createContext({});
+
+export function AuthProvider({ children }) {
+  const [sessionToken, setSessionToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check for stored session and user data on mount
+    const token = localStorage.getItem('sessionToken');
+    const userData = localStorage.getItem('userData');
+
+    if (token) {
+      setSessionToken(token);
+      if (userData) {
+        try {
+          setUser(JSON.parse(userData));
+        } catch (e) {
+          console.error('Failed to parse stored user data');
+        }
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = (token, userData) => {
+    localStorage.setItem('sessionToken', token);
+    if (userData) {
+      localStorage.setItem('userData', JSON.stringify(userData));
+      setUser(userData);
+    }
+    setSessionToken(token);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('userData');
+    setSessionToken(null);
+    setUser(null);
+    router.push('/login');
+  };
+
+  return (
+    <AuthContext.Provider value={{
+      isAuthenticated: !!sessionToken,
+      sessionToken,
+      user,
+      login,
+      logout,
+      isLoading
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);
+```
+
+#### Step 4: Update Your App Component
+
+Update your `pages/_app.js` file to wrap your application with the AuthProvider:
+
+```javascript
+import '@/styles/globals.css';
+import { AuthProvider } from '../context/AuthContext';
+
+function MyApp({ Component, pageProps }) {
+  return (
+    <AuthProvider>
+      <Component {...pageProps} />
+    </AuthProvider>
+  );
+}
+
+export default MyApp;
+```
+
+#### Next Steps
+
+Now that you have set up the basic authentication infrastructure, you're ready to implement the registration and login functionality in your application:
+
+- [Continue to Register and Login](/docs/register-login)
+
+## Register & Login
+
+### Creating Register and Login Pages
+
+This guide shows you how to implement user registration and login pages using Aegis.
+
+#### Registration Page
+
+Create a new file called `pages/register.js` with the following code:
+
+```javascript
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { useAuth } from '../context/AuthContext';
+import { registerUser } from '../utils/auth';
+
+export default function Register() {
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+    });
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
+    const { login } = useAuth();
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
+
+        const response = await registerUser(formData);
+
+        if (!response.success || !response.data) {
+            setError(response.error || 'Registration failed');
+            setIsLoading(false);
+            return;
+        }
+
+        login(response.data.sessionToken);
+        router.push('/dashboard');
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-900">
+            <div className="max-w-md w-full space-y-8 p-8 bg-gray-800 rounded-lg shadow-md">
+                <div>
+                    <h2 className="text-3xl font-bold text-center text-white">
+                        Create an account
+                    </h2>
+                    <p className="mt-2 text-center text-gray-400">
+                        Already have an account?{' '}
+                        <Link href="/login" className="text-sky-500 hover:text-sky-400">
+                            Sign in
+                        </Link>
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="bg-red-900/30 text-red-400 p-3 rounded-md">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="firstName"
+                                    className="block text-sm font-medium text-gray-300">
+                                    First Name
+                                </label>
+                                <input
+                                    id="firstName"
+                                    name="firstName"
+                                    type="text"
+                                    required
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                    className="mt-1 block w-full px-3 py-2 bg-gray-700 border
+                                        border-gray-600 rounded-md text-white focus:outline-none
+                                        focus:ring-sky-500 focus:border-sky-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="lastName"
+                                    className="block text-sm font-medium text-gray-300">
+                                    Last Name
+                                </label>
+                                <input
+                                    id="lastName"
+                                    name="lastName"
+                                    type="text"
+                                    required
+                                    value={formData.lastName}
+                                    onChange={handleChange}
+                                    className="mt-1 block w-full px-3 py-2 bg-gray-700 border
+                                        border-gray-600 rounded-md text-white focus:outline-none
+                                        focus:ring-sky-500 focus:border-sky-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label htmlFor="email"
+                                className="block text-sm font-medium text-gray-300">
+                                Email
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                required
+                                value={formData.email}
+                                onChange={handleChange}
+                                className="mt-1 block w-full px-3 py-2 bg-gray-700 border
+                                    border-gray-600 rounded-md text-white focus:outline-none
+                                    focus:ring-sky-500 focus:border-sky-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="password"
+                                className="block text-sm font-medium text-gray-300">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                value={formData.password}
+                                onChange={handleChange}
+                                className="mt-1 block w-full px-3 py-2 bg-gray-700 border
+                                    border-gray-600 rounded-md text-white focus:outline-none
+                                    focus:ring-sky-500 focus:border-sky-500"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full py-2 px-4 bg-sky-600 text-white rounded-md
+                            hover:bg-sky-700 focus:outline-none focus:ring-2
+                            focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50"
+                    >
+                        {isLoading ? 'Creating account...' : 'Create account'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+```
+
+#### Login Page
+
+Create a new file called `pages/login.js` with the following code:
+
+```javascript
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { useAuth } from '../context/AuthContext';
+import { loginUser } from '../utils/auth';
+
+export default function Login() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
+    const { login } = useAuth();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
+
+        const response = await loginUser({ email, password });
+
+        if (!response.success || !response.data) {
+            setError(response.error || 'Login failed');
+            setIsLoading(false);
+            return;
+        }
+
+        // Pass both the token and the user data to the login function
+        login(response.data.sessionToken, response.data.user);
+        router.push('/dashboard');
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-900">
+            <div className="max-w-md w-full space-y-8 p-8 bg-gray-800 rounded-lg shadow-md">
+                <div>
+                    <h2 className="text-3xl font-bold text-center text-white">Sign in</h2>
+                    <p className="mt-2 text-center text-gray-400">
+                        Or{' '}
+                        <Link href="/register" className="text-sky-500 hover:text-sky-400">
+                            create an account
+                        </Link>
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="bg-red-900/30 text-red-400 p-3 rounded-md">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+                    <div className="space-y-4">
+                        <div>
+                            <label htmlFor="email"
+                                className="block text-sm font-medium text-gray-300">
+                                Email
+                            </label>
+                            <input
+                                id="email"
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 bg-gray-700 border
+                                    border-gray-600 rounded-md text-white focus:outline-none
+                                    focus:ring-sky-500 focus:border-sky-500"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="password"
+                                className="block text-sm font-medium text-gray-300">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 bg-gray-700 border
+                                    border-gray-600 rounded-md text-white focus:outline-none
+                                    focus:ring-sky-500 focus:border-sky-500"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full py-2 px-4 bg-sky-600 text-white rounded-md
+                            hover:bg-sky-700 focus:outline-none focus:ring-2
+                            focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50"
+                    >
+                        {isLoading ? 'Signing in...' : 'Sign in'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+```
+
+#### Adding a Home Page with Authentication Redirect
+
+Update your home page in `pages/index.js` to redirect authenticated users:
+
+```javascript
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '../context/AuthContext';
+import Link from 'next/link';
+
+export default function Home() {
+    const { isAuthenticated, isLoading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!isLoading && isAuthenticated) {
+            router.push('/dashboard');
+        }
+    }, [isAuthenticated, isLoading, router]);
+
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center
+            bg-gray-900 text-white">
+            <h1 className="text-4xl font-bold mb-6">Welcome to My App</h1>
+            <p className="text-xl mb-8 text-gray-300">
+                Powered by Aegis Authentication
+            </p>
+
+            <div className="flex space-x-4">
+                <Link
+                    href="/login"
+                    className="px-6 py-3 bg-sky-600 hover:bg-sky-700 rounded-md
+                        transition-colors"
+                >
+                    Login
+                </Link>
+                <Link
+                    href="/register"
+                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-md
+                        transition-colors"
+                >
+                    Register
+                </Link>
+            </div>
+        </div>
+    );
+}
+```
+
+#### Next Steps
+
+Now that you have implemented authentication pages for your users, let's learn how to access and display user details after authentication:
+
+- [Continue to User Details](/docs/user-details)
+
+## User Details
+
+### Working with User Details
+
+This guide covers retrieving and displaying authenticated user details in your application.
+
+#### Step 1: Add User Details Fetching
+
+First, add a function to fetch user details to your `utils/auth.js` file:
+
+```javascript
+// Get authenticated user details
+export async function getUserDetails(sessionToken) {
+  const path = '/api/users/me';
+  const method = 'GET';
+  const timestamp = Date.now().toString();
+  const body = '';
+
+  try {
+    const signature = generateSignature(method, path, timestamp, body);
+
+    const response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Public-Key': PUBLIC_KEY,
+        'X-Timestamp': timestamp,
+        'X-Signature': signature,
+        'X-Session-Token': sessionToken,
+      },
+      mode: 'cors',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `Server error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    return { success: false, error: `Network error: ${error.message}` };
+  }
+}
+```
+
+#### Step 2: Update Login Function to Fetch User Details
+
+Modify the login function in `utils/auth.js` to fetch user details after successful login:
+
+```javascript
+// Update the login function in utils/auth.js
+export async function loginUser(credentials) {
+  // ... existing code ...
+
+  try {
+    // ... existing request code ...
+
+    const data = await response.json();
+
+    // If login was successful and we have a session token, fetch user details
+    if (data.success && data.data && data.data.sessionToken) {
+      const userResponse = await getUserDetails(data.data.sessionToken);
+      if (userResponse.success && userResponse.data) {
+        data.data.user = userResponse.data;
+      }
+    }
+
+    return data;
+  } catch (error) {
+    // ... existing error handling ...
+  }
+}
+```
+
+#### Step 3: Create a User Profile Component
+
+Create a component to display user information at `components/UserProfile.js`:
+
+```javascript
+import { useAuth } from '../context/AuthContext';
+
+export default function UserProfile() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <div className="text-gray-400">User information not available</div>;
+  }
+
+  return (
+    <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+      <h2 className="text-xl font-semibold text-white mb-4">Your Profile</h2>
+
+      <div className="space-y-3">
+        <div>
+          <p className="text-gray-400 text-sm">Name</p>
+          <p className="text-white">{user.firstName} {user.lastName}</p>
+        </div>
+
+        <div>
+          <p className="text-gray-400 text-sm">Email</p>
+          <p className="text-white">{user.email}</p>
+        </div>
+
+        {user.createdAt && (
+          <div>
+            <p className="text-gray-400 text-sm">Account Created</p>
+            <p className="text-white">{new Date(user.createdAt).toLocaleDateString()}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+#### Step 4: Create a Dashboard with User Information
+
+Create a dashboard page at `pages/dashboard.js` that displays the user's information:
+
+```javascript
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '../context/AuthContext';
+import UserProfile from '../components/UserProfile';
+
+export default function Dashboard() {
+  const { isAuthenticated, logout, isLoading, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading...</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900">
+      <header className="bg-gray-800 shadow">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-xl font-bold text-white">My App Dashboard</h1>
+          <div className="flex items-center space-x-4">
+            {user && (
+              <span className="text-gray-300">
+                Welcome, {user.firstName}
+              </span>
+            )}
+            <button
+              onClick={logout}
+              className="bg-gray-700 px-4 py-2 text-white rounded-md hover:bg-gray-600"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="px-4 py-6 sm:px-0">
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Welcome to the Dashboard!</h2>
+              <p className="text-gray-300">
+                You are now authenticated with Aegis.
+              </p>
+              <p className="text-gray-300 mt-4">
+                Your session is active.
+              </p>
+            </div>
+
+            {/* User profile section */}
+            <div className="mt-6">
+              <UserProfile />
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+#### Step 5: Handle Loading and Protected Routes
+
+Your auth context should already handle loading states. In each protected page, add similar protection code as in the dashboard to redirect unauthenticated users:
+
+```javascript
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '../context/AuthContext';
+
+export default function ProtectedPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  // Your protected page content here
+}
+```
+
+#### Conclusion
+
+You now have a complete authentication system integrated with Aegis that:
+
+- Registers new users securely
+- Authenticates existing users
+- Fetches and displays user profile information
+- Protects routes that require authentication
+- Manages user sessions
+
+For more detailed information about the available API endpoints and parameters, check out our API Reference:
+
+- [View the API Reference](/docs/api)
+
+## API Reference
+
+### API Reference
+
+Complete reference for all available API endpoints, including authentication, user management, and application configuration.
+
+#### Authentication Headers
+
+All API requests must include the following headers:
+
+| Header           | Description                        | Required                  |
+|------------------|------------------------------------|---------------------------|
+| X-Public-Key     | Your application's public key      | Always                    |
+| X-Timestamp      | Current timestamp in milliseconds  | Always                    |
+| X-Signature      | HMAC signature of request          | Always                    |
+| X-Session-Token  | User's session token               | For authenticated endpoints|
+| Content-Type     | application/json                   | For requests with a body  |
+
+#### Generating the Signature
+
+```javascript
+// Signature generation example (JavaScript)
+function generateSignature(method, path, timestamp, body) {
+  const payload = timestamp + method + path + body;
+  const hmac = crypto.createHmac('sha256', YOUR_SECRET_KEY);
+  hmac.update(payload);
+  return hmac.digest('hex');
+}
+```
+
+#### User Endpoints
+
+##### Register a New User
+
+```http
+POST /api/users/register
+```
+
+Request Body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "sessionToken": "user_session_token",
+    "expiresAt": "2023-12-31T23:59:59Z"
+  }
+}
+```
+
+##### Authenticate an Existing User
+
+```http
+POST /api/users/login
+```
+
+Request Body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "sessionToken": "user_session_token",
+    "expiresAt": "2023-12-31T23:59:59Z"
+  }
+}
+```
+
+##### Get the Profile of the Authenticated User
+
+```http
+GET /api/users/me
+```
+
+Headers:
+
+```http
+X-Session-Token: user_session_token
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_id",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "createdAt": "2023-01-01T12:00:00Z"
+  }
+}
+```
+
+#### Error Handling
+
+All API endpoints return consistent error responses with helpful error messages.
+
+```json
+{
+  "success": false,
+  "error": "Detailed error message"
+}
+```
+
+#### Common HTTP Status Codes
+
+| Status Code | Description                     |
+|-------------|---------------------------------|
+| 200 OK      | Request successful              |
+| 400 Bad Request | Invalid request parameters  |
+| 401 Unauthorized | Authentication required or failed |
+| 403 Forbidden | Permission denied             |
+| 404 Not Found | Resource not found            |
+| 500 Internal Server Error | Server-side error |
+
+#### Rate Limiting
+
+To ensure service reliability, the API implements rate limiting:
+
+- Maximum of 100 requests per minute per IP address
+- Maximum of 1000 requests per hour per application
+
+When a rate limit is exceeded, the API will respond with a 429 Too Many Requests status code and specify the time at which the limit will reset.

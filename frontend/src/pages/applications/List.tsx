@@ -39,7 +39,7 @@ export function Applications() {
         <h1 className="text-2xl font-bold">Applications</h1>
         <Link
           to="/app/applications/new"
-          className="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700"
+          className="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700 transition-colors duration-200"
         >
           Create New Application
         </Link>
@@ -53,7 +53,7 @@ export function Applications() {
             <p className="text-gray-400">You don't have any applications yet.</p>
             <Link
               to="/app/applications/new"
-              className="mt-4 text-sky-500 hover:text-sky-400 inline-block"
+              className="mt-4 text-sky-500 hover:text-sky-400 inline-block transition-colors duration-200"
             >
               Create your first application
             </Link>
@@ -65,7 +65,7 @@ export function Applications() {
                 <div>
                   <Link 
                     to={`/app/applications/${app.id}`}
-                    className="text-xl font-bold hover:text-sky-400"
+                    className="text-xl font-bold hover:text-sky-400 transition-colors duration-200"
                   >
                     {app.name}
                   </Link>
@@ -73,7 +73,7 @@ export function Applications() {
                 </div>
                 <Link
                   to={`/app/applications/${app.id}/edit`}
-                  className="bg-neutral-700 text-white px-3 py-1 rounded-md hover:bg-neutral-600"
+                  className="bg-neutral-700 text-white px-3 py-1 rounded-md hover:bg-neutral-600 transition-colors duration-200"
                 >
                   Edit
                 </Link>

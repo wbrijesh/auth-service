@@ -13,6 +13,14 @@ import { EditApplication } from './pages/applications/Edit';
 import { ApplicationDetails } from './pages/applications/Details';
 import { ApplicationUsers } from './pages/applications/Users';
 
+// Import documentation pages
+import { DocsHome } from './pages/docs/Home';
+import { DocsAPI } from './pages/docs/API';
+import { DocsGettingStarted } from './pages/docs/GettingStarted';
+import { DocsApplicationSetup } from './pages/docs/ApplicationSetup';
+import { DocsRegisterLogin } from './pages/docs/RegisterLogin';
+import { DocsUserDetails } from './pages/docs/UserDetails';
+
 function App() {
   return (
     <AuthProvider>
@@ -22,6 +30,16 @@ function App() {
             <Route index element={<Landing />} />
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
+            
+            {/* Documentation routes - accessible without login */}
+            <Route path="docs">
+              <Route index element={<DocsHome />} />
+              <Route path="getting-started" element={<DocsGettingStarted />} />
+              <Route path="application-setup" element={<DocsApplicationSetup />} />
+              <Route path="register-login" element={<DocsRegisterLogin />} />
+              <Route path="user-details" element={<DocsUserDetails />} />
+              <Route path="api" element={<DocsAPI />} />
+            </Route>
             
             <Route path="app" element={<ProtectedRoute />}>
               <Route path="dashboard" element={<Dashboard />} />
